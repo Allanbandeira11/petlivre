@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Pedidos — PetLivre</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+.stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--sh)}
+.stat small{color:var(--mut);font-weight:700}
+.stat b{font-size:24px;display:block;margin-top:4px}
+.toolsbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.toolsbar input,.toolsbar select{padding:11px;border-radius:10px;border:1px solid var(--line);font-size:14px}
+.order{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:var(--sh)}
+.order.novo{border-left:6px solid var(--red)}
+.order.prep{border-left:6px solid #EE9D00}
+.order.ok{border-left:6px solid #00753a}
+.order-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.badge{font-size:12px;font-weight:900;padding:4px 10px;border-radius:99px;background:#eee}
+.badge.Novo{background:#FFE1D6;color:#a81d00}
+.badge.Preparando{background:#FFF0C2;color:#7a5200}
+.badge.Saiu{background:#D6E9FF;color:#0A5587}
+.badge.Entregue{background:#D8F5E2;color:#00753a}
+.badge.Cancelado{background:#eee;color:#666}
+.order ul{margin:10px 0 10px 18px;font-size:14px;color:#444}
+.order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btn-sm{padding:10px 14px;font-size:13px}
+@media(max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}}
+@media print{.no-print{display:none}.order{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="topbar">📦 Painel do lojista · atualiza sozinho quando chega pedido neste navegador (demo local)</div>
+<header class="header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo"><span class="logo-paw">P</span><span>Pet<b>Livre</b> · Lojista</span></a>
+    <div class="h-actions" style="margin-left:auto">
+      <a class="h-btn" href="index.html" style="text-decoration:none">Loja</a>
+      <a class="h-btn" href="checkout.html" style="text-decoration:none">Checkout</a>
+      <button class="h-btn cart-btn" onclick="renderPedidos()">🔄 Atualizar</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="stats">
+    <div class="stat"><small>Pedidos</small><b id="sTotal">0</b></div>
+    <div class="stat"><small>Faturamento</small><b id="sFat">R$ 0</b></div>
+    <div class="stat"><small>Ticket médio</small><b id="sTicket">R$ 0</b></div>
+    <div class="stat"><small>Novos</small><b id="sNovos">0</b></div>
+  </div>
+
+  <div class="toolsbar no-print">
+    <input id="fBusca" placeholder="Buscar nome, ID, bairro..." oninput="renderPedidos()" style="flex:1;min-width:200px">
+    <select id="fStatus" onchange="renderPedidos()">
+      <option value="">Todos os status</option>
+      <option>Novo</option><option>Aguardando pagamento</option><option>Pago</option><option>Preparando</option><option>Saiu p/ entrega</option><option>Entregue</option><option>Cancelado</option>
+    </select>
+    <button class="btn btn-dark btn-sm" onclick="exportCSV()">Exportar CSV</button>
+    <button class="btn btn-ghost btn-sm" onclick="limparEntregues()">Limpar entregues</button>
+  </div>
+
+  <div class="card-box no-print" id="mpCard" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px">
+    <b>💳 Pagamentos automáticos</b> <span id="mpStatus" class="muted" style="font-size:13px">verificando...</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn btn-dark btn-sm" onclick="conectarMP()">Conectar com Mercado Pago</button>
+      <button class="btn btn-ghost btn-sm" onclick="desconectarMP()">Desconectar</button>
+    </div>
+    <small class="muted">O dono só clica, loga no MP e autoriza. Sem site dev. Taxa Pix ~0,99% (R$50 → R$49,50). Reembolso em 1 clique.</small>
+  </div>
+
+  <p class="muted" style="font-size:13px;margin-bottom:10px">💡 <b>SITE LOJISTA:</b> aqui caem os pedidos do <b>site dos clientes</b> (loja + checkout).</p>
+
+  <div id="lista"></div>
+</main>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+<script src="mp-config.js"></script>
+<script>
+function renderPedidos(){
+  const orders = getOrders();
+  const q = norm(document.getElementById("fBusca").value||"");
+  const st = document.getElementById("fStatus").value;
+  const ativos = orders.filter(o=>o.status!=="Cancelado");
+  const fat = ativos.reduce((s,o)=>s+(o.total||0),0);
+  document.getElementById("sTotal").textContent = orders.length;
+  document.getElementById("sFat").textContent = fmt(fat);
+  document.getElementById("sTicket").textContent = orders.length ? fmt(fat/orders.length) : fmt(0);
+  document.getElementById("sNovos").textContent = orders.filter(o=>o.status==="Novo").length;
+
+  const list = orders.filter(o=>{
+    if(st && o.status!==st && !(st==="Saiu p/ entrega"&&o.status==="Saiu")) return false;
+    if(!q) return true;
+    const txt = norm([o.id,o.cliente?.nome,o.cliente?.zap,o.endereco?.bairro,o.endereco?.rua,o.pagamento,o.entrega].join(" "));
+    return q.split(/\s+/).every(t=>txt.includes(t));
+  });
+
+  document.getElementById("lista").innerHTML = list.map(o=>{
+    const d = new Date(o.data).toLocaleString("pt-BR");
+    const cls = o.status==="Novo"?"novo":(o.status==="Entregue"?"ok":(o.status==="Cancelado"?"":"prep"));
+    return `<div class="order ${cls}">
+      <div class="order-head">
+        <div><b>${o.id}</b> <span class="badge ${o.status.split(" ")[0]}">${o.status}</span><br><small class="muted">${d} · ${o.entrega} · ${o.pagamento}${o.cupom?" · "+o.cupom:""}</small></div>
+        <div><b style="font-size:20px">${fmt(o.total)}</b><br><small class="muted">sub ${fmt(o.sub)} · desc ${fmt(o.desc)} · frete ${fmt(o.frete)}</small></div>
+      </div>
+      <div style="margin-top:8px"><b>${o.cliente?.nome}</b> · ${o.cliente?.zap} ${o.endereco?`· ${o.endereco.rua}, ${o.endereco.numero} - ${o.endereco.bairro||""} ${o.endereco.cidade||""}`:"· Retirada"} ${o.obs?`· <i>"${o.obs}"</i>`:""} ${o.mpPaymentId?`· <small class="muted">MP #${o.mpPaymentId}</small>`:""}</div>
+      <ul>${(o.items||[]).map(i=>`<li>${i.name} x${i.q} — ${fmt(i.price*i.q)}</li>`).join("")}</ul>
+      <div class="order-actions no-print">
+        <select onchange="trocarStatus('${o.id}',this.value)">
+          ${["Novo","Aguardando pagamento","Pago","Preparando","Saiu p/ entrega","Entregue","Cancelado"].map(s=>`<option ${s===o.status?"selected":""}>${s}</option>`).join("")}
+        </select>
+        <button class="btn btn-dark btn-sm" onclick="zapCliente('${o.id}')">WhatsApp cliente</button>
+        ${o.mpPaymentId?`<button class="btn btn-ghost btn-sm" onclick="reembolsarMP('${o.id}')">Reembolsar MP</button>`:`<button class="btn btn-ghost btn-sm" onclick="marcarPago('${o.id}')">Marcar pago</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="window.print()">Imprimir</button>
+        <button class="btn btn-ghost btn-sm" onclick="excluir('${o.id}')">Excluir</button>
+      </div>
+    </div>`;
+  }).join("") || "<div class='card-box' style='background:#fff;border:1px dashed var(--red);border-radius:12px;padding:24px;text-align:center'>Nenhum pedido ainda. Faça um teste no <a href='checkout.html'>checkout</a> 🐾</div>";
+}
+function trocarStatus(id,v){ setStatusPedido(id,v); renderPedidos(); toast(id+" → "+v); }
+function marcarPago(id){ setStatusPedido(id,"Pago"); renderPedidos(); }
+async function reembolsarMP(id){
+  const o = getOrders().find(x=>x.id===id); if(!o?.mpPaymentId){ toast("Sem ID MP"); return; }
+  if(!confirm(`Reembolsar ${fmt(o.total)} do pedido ${id} no Mercado Pago?`)) return;
+  try{
+    const base = (typeof MP_CONFIG!=="undefined" && MP_CONFIG.BACKEND_URL) ? MP_CONFIG.BACKEND_URL.replace(/\/$/,"") : "";
+    if(!base){ window.open("https://www.mercadopago.com.br/activities", "_blank"); toast("Abra o painel MP > Atividades > Devolver"); return; }
+    await fetch(base+"/reembolsar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({paymentId:o.mpPaymentId, loja:mpLoja()})});
+    setStatusPedido(id,"Cancelado"); renderPedidos(); toast("Reembolsado!");
+  }catch{ toast("Falha, faça no painel MP"); }
+}
+function excluir(id){ if(confirm("Excluir "+id+"?")){ delPedido(id); renderPedidos(); } }
+function zapCliente(id){
+  const o = getOrders().find(x=>x.id===id); if(!o) return;
+  const fone = (o.cliente?.zap||"").replace(/\D/g,"");
+  const msg = `Olá ${o.cliente?.nome}! Aqui é da PetLivre 🐾 Seu pedido ${o.id} está: ${o.status}. Total ${fmt(o.total)}.`;
+  window.open(`https://wa.me/${fone? "55"+fone : WHATS}?text=${encodeURIComponent(msg)}`,"_blank");
+}
+function exportCSV(){
+  const orders = getOrders();
+  const rows = [["id","data","status","nome","zap","entrega","pagamento","total","items"]];
+  orders.forEach(o=>rows.push([o.id,o.data,o.status,o.cliente?.nome,o.cliente?.zap,o.entrega,o.pagamento,o.total,(o.items||[]).map(i=>`${i.name} x${i.q}`).join("; ")]));
+  const csv = rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));
+  a.download = "pedidos-petlivre.csv"; a.click();
+}
+function limparEntregues(){ if(!confirm("Apagar todos Entregue/Cancelado?")) return; saveOrders(getOrders().filter(o=>!["Entregue","Cancelado"].includes(o.status))); renderPedidos(); }
+function mpBase(){ return (typeof MP_CONFIG!=="undefined" && MP_CONFIG.BACKEND_URL) ? MP_CONFIG.BACKEND_URL.replace(/\/$/,"") : ""; }
+function mpLoja(){ return (typeof MP_CONFIG!=="undefined" && MP_CONFIG.LOJA_ID) ? MP_CONFIG.LOJA_ID : "petlivre"; }
+async function checarMP(){
+  const el = document.getElementById("mpStatus");
+  const base = mpBase();
+  if(!base){
+    el.innerHTML = "⚠️ <b>backend não configurado (modo demo)</b> — o botão ainda não tem pra onde conectar. Passos: 1) suba o <small>server-mp-exemplo.js</small> no Render 2) cole a URL no <small>mp-config.js</small> em BACKEND_URL 3) recarregue.";
+    return;
+  }
+  el.textContent = "consultando backend...";
+  try{
+    const r = await fetch(base+"/mp/status?loja="+encodeURIComponent(mpLoja()));
+    const j = await r.json();
+    el.textContent = j.conectado ? `✅ conectado (conta ${j.user_id})` : "❌ não conectado — clique em Conectar";
+  }catch{ el.textContent = "❌ backend fora do ar (URL errada ou servidor desligado)"; }
+}
+async function conectarMP(){
+  const base = mpBase();
+  if(!base){
+    toast("Falta configurar o backend!");
+    document.getElementById("mpStatus").innerHTML = "⚠️ <b>Nada acontece porque o BACKEND_URL está vazio.</b><br>1) Suba o <small>server-mp-exemplo.js</small> no Render (grátis)<br>2) Abra <small>mp-config.js</small> e preencha <small>BACKEND_URL: \"https://sua-url.onrender.com\"</small><br>3) Recarregue essa página e clique de novo.<br><br>Quer que eu suba/teste local agora?";
+    alert("Falta configurar o backend!\n\n1) Suba o server-mp-exemplo.js no Render\n2) Cole a URL no mp-config.js (BACKEND_URL)\n3) Recarregue e clique Conectar de novo.");
+    return;
+  }
+  try{
+    toast("Abrindo Mercado Pago...");
+    const r = await fetch(base+"/mp/connect-url?loja="+encodeURIComponent(mpLoja()));
+    const j = await r.json();
+    if(j.url){ window.open(j.url, "_blank", "width=600,height=700"); }
+    else { toast("Falha: " + (j.erro||"sem URL")); alert("Falha ao gerar link: " + (j.erro||"verifique MP_CLIENT_ID no backend")); }
+  }catch(e){ toast("Erro de rede"); alert("Não consegui falar com o backend: " + base); }
+  setTimeout(checarMP, 3000);
+}
+async function desconectarMP(){
+  const base = mpBase();
+  if(!base){ toast("Nada conectado (modo demo)"); return; }
+  await fetch(base+"/mp/desconectar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({loja:mpLoja()})});
+  checarMP();
+}
+renderPedidos();
+checarMP();
+setInterval(renderPedidos, 5000);
+</script>
+</body>
+</html>

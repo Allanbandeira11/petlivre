@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout — PetLivre</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.ck{display:grid;grid-template-columns:1fr 380px;gap:18px;margin:18px 0 30px}
+.card-box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--sh)}
+.card-box h2{font-size:18px;margin-bottom:12px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field label{font-size:13px;font-weight:800}
+.field input,.field select,.field textarea{padding:12px;border-radius:10px;border:1px solid var(--line);font-size:15px;font-family:inherit}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--red);border-color:var(--red)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg label{flex:1;border:2px solid var(--line);border-radius:10px;padding:12px;text-align:center;font-weight:800;cursor:pointer;font-size:14px;min-width:120px}
+.seg input{display:none}
+.seg input:checked+span{font-weight:900}
+.seg label:has(input:checked){border-color:var(--red);background:#FFF6D6}
+.res-item{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.totals2{margin-top:12px;display:grid;gap:6px;font-size:15px}
+.totals2 .total b{font-size:24px;color:var(--red)}
+.pixbox{background:#E5F9ED;border:1px dashed #00753a;border-radius:10px;padding:12px;font-size:13px;margin-top:10px}
+.success{text-align:center;padding:40px 20px}
+.success h1{font-size:28px;margin:12px 0}
+@media(max-width:900px){.ck{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">Checkout seguro · Pix com 10% OFF (PET10) · Frete grátis acima de R$ 99</div>
+<header class="header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo"><span class="logo-paw">P</span><span>Pet<b>Livre</b></span></a>
+    <div class="h-actions" style="margin-left:auto">
+      <a class="h-btn" href="index.html" style="text-decoration:none">← Voltar à loja</a>
+      <a class="h-btn" href="pedidos.html" style="text-decoration:none">📦 Painel lojista</a>
+    </div>
+  </div>
+</header>
+
+<main class="container" id="ckMain">
+  <p class="muted" style="font-size:13px;margin:16px 0 4px"><a href="index.html" style="color:var(--red);font-weight:700;text-decoration:none">Início</a> / Checkout</p>
+  <h1>Finalizar pedido</h1>
+  <div class="ck">
+    <div>
+      <div class="card-box">
+        <h2>1 · Seus dados</h2>
+        <div class="grid2">
+          <div class="field"><label>Nome completo *</label><input id="fNome" placeholder="Ex: Maria Silva"></div>
+          <div class="field"><label>WhatsApp *</label><input id="fZap" placeholder="(21) 99999-9999" inputmode="tel"></div>
+        </div>
+      </div>
+      <div class="card-box" style="margin-top:14px">
+        <h2>2 · Entrega</h2>
+        <div class="seg">
+          <label><input type="radio" name="entrega" value="Entrega" checked onchange="renderResumo()"><span>🛵 Entrega</span></label>
+          <label><input type="radio" name="entrega" value="Retirada" onchange="renderResumo()"><span>🏪 Retirada grátis</span></label>
+        </div>
+        <div id="endBox" style="margin-top:12px">
+          <div class="grid2">
+            <div class="field"><label>CEP</label><input id="fCep" placeholder="00000-000" inputmode="numeric"></div>
+            <div class="field"><label>Cidade</label><input id="fCidade" placeholder="Sua cidade"></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Rua / Avenida *</label><input id="fRua" placeholder="Rua..."></div>
+            <div class="field"><label>Número *</label><input id="fNum" placeholder="123"></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Bairro</label><input id="fBairro" placeholder="Bairro"></div>
+            <div class="field"><label>Complemento</label><input id="fComp" placeholder="Apto, bloco..."></div>
+          </div>
+        </div>
+      </div>
+      <div class="card-box" style="margin-top:14px">
+        <h2>3 · Pagamento</h2>
+        <div class="seg">
+          <label><input type="radio" name="pag" value="Pix" checked onchange="renderResumo()"><span>⚡ Pix (-10% c/ PET10)</span></label>
+          <label><input type="radio" name="pag" value="Cartão" onchange="renderResumo()"><span>💳 Cartão</span></label>
+          <label><input type="radio" name="pag" value="Dinheiro" onchange="renderResumo()"><span>💵 Dinheiro</span></label>
+        </div>
+        <div class="field" id="trocoBox" style="margin-top:12px;display:none"><label>Troco para quanto?</label><input id="fTroco" placeholder="Ex: R$ 200"></div>
+        <div class="field"><label>Observações</label><textarea id="fObs" rows="2" placeholder="Ex: portão azul, deixar com porteiro..."></textarea></div>
+      </div>
+    </div>
+    <div>
+      <div class="card-box">
+        <h2>Resumo</h2>
+        <div id="resItems"></div>
+        <div class="field" style="margin-top:12px"><label>Cupom</label><div style="display:flex;gap:8px"><input id="cupomCk" placeholder="Tente PET10" style="flex:1"><button class="btn btn-dark" onclick="aplicarCupomCk()" style="padding:11px 16px">OK</button></div></div>
+        <div class="totals2">
+          <div class="res-item"><span>Subtotal</span><b id="rSub">R$ 0</b></div>
+          <div class="res-item"><span>Desconto</span><b id="rDesc">-R$ 0</b></div>
+          <div class="res-item"><span>Frete</span><b id="rFrete">R$ 0</b></div>
+          <div class="res-item total"><span>Total</span><b id="rTotal">R$ 0</b></div>
+        </div>
+        <div class="pixbox" id="pixInfo">⚡ Pagando no <b>Pix com PET10</b> você economiza 10% na hora.</div>
+        <div class="pixbox" id="mpArea" style="display:none"></div>
+        <button class="btn btn-red btn-block" onclick="confirmarPedido()" style="margin-top:12px">Confirmar pedido ✅</button>
+        <button class="btn btn-ghost btn-block" onclick="location.href='index.html'">Continuar comprando</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+<script src="mp-config.js"></script>
+<script>
+document.getElementById("cupomCk").value = localStorage.getItem("petlivre_cupom") || "";
+function getEntrega(){ return (document.querySelector('input[name=entrega]:checked')||{}).value || "Entrega"; }
+function getPag(){ return (document.querySelector('input[name=pag]:checked')||{}).value || "Pix"; }
+
+document.querySelectorAll('input[name=entrega]').forEach(r=>r.addEventListener("change",()=>{
+  document.getElementById("endBox").style.display = getEntrega()==="Retirada" ? "none" : "block";
+  renderResumo();
+}));
+document.querySelectorAll('input[name=pag]').forEach(r=>r.addEventListener("change",()=>{
+  document.getElementById("trocoBox").style.display = getPag()==="Dinheiro" ? "block" : "none";
+  renderResumo();
+}));
+
+function aplicarCupomCk(){ localStorage.setItem("petlivre_cupom", document.getElementById("cupomCk").value.trim().toUpperCase()); renderResumo(); toast("Cupom aplicado!"); }
+
+function renderResumo(){
+  if(!cart.length){
+    document.getElementById("resItems").innerHTML = "<p class='muted'>Carrinho vazio. <a href='index.html'>Voltar à loja</a></p>";
+  } else {
+    document.getElementById("resItems").innerHTML = cart.map(i=>{
+      const p = PRODUCTS.find(x=>x.id===i.id);
+      return `<div class="res-item"><span>${p.name} <small class="muted">x${i.q}</small></span><b>${fmt(p.price*i.q)}</b></div>`;
+    }).join("");
+  }
+  const cupom = (document.getElementById("cupomCk").value||"").trim().toUpperCase();
+  const t = calcPedido(cupom, getPag(), getEntrega());
+  document.getElementById("rSub").textContent = fmt(t.sub);
+  document.getElementById("rDesc").textContent = "-"+fmt(t.desc);
+  document.getElementById("rFrete").textContent = t.frete===0 ? "Grátis" : fmt(t.frete);
+  document.getElementById("rTotal").textContent = fmt(t.total);
+  document.getElementById("pixInfo").style.display = getPag()==="Pix" ? "block" : "none";
+  const mpOn = typeof MP_CONFIG!=="undefined" && MP_CONFIG.BACKEND_URL;
+  const mpArea = document.getElementById("mpArea");
+  if(getPag()==="Pix" && !mpOn){
+    mpArea.style.display = "block";
+    mpArea.innerHTML = `🔧 <b>Modo demo:</b> Pix manual por enquanto. Pra ficar <b>automático</b> (confirma sozinho + reembolso em 1 clique), suba o <small>server-mp-exemplo.js</small> e coloque a URL no <small>mp-config.js</small>. Taxa MP Pix ~0,99% — em R$ 50 você recebe R$ 49,50.`;
+  } else if(getPag()==="Pix" && mpOn){
+    mpArea.style.display = "block";
+    mpArea.innerHTML = `⚡ <b>Pix automático Mercado Pago</b> ativo. O QR real aparece após confirmar. Taxa ~0,99%.`;
+  } else {
+    mpArea.style.display = "none";
+  }
+  renderCart();
+}
+
+let MP_POLL = null;
+async function confirmarPedido(){
+  const nome = document.getElementById("fNome").value.trim();
+  const zap = document.getElementById("fZap").value.trim();
+  if(nome.length<3){ toast("Digite seu nome"); return; }
+  if(zap.replace(/\D/g,"").length<10){ toast("Digite um WhatsApp válido"); return; }
+  if(!cart.length){ toast("Carrinho vazio"); return; }
+  const entrega = getEntrega();
+  const pagamento = getPag();
+  const cupom = (document.getElementById("cupomCk").value||"").trim().toUpperCase();
+  let endereco = null;
+  if(entrega==="Entrega"){
+    const rua = document.getElementById("fRua").value.trim();
+    const num = document.getElementById("fNum").value.trim();
+    if(!rua || !num){ toast("Digite rua e número"); return; }
+    endereco = {cep: document.getElementById("fCep").value.trim(), cidade: document.getElementById("fCidade").value.trim(), rua, numero: num, bairro: document.getElementById("fBairro").value.trim(), comp: document.getElementById("fComp").value.trim()};
+  }
+  const t = calcPedido(cupom, pagamento, entrega);
+  const items = cart.map(i=>{ const p=PRODUCTS.find(x=>x.id===i.id); return {id:p.id,name:p.name,price:p.price,q:i.q}; });
+  const mpOn = typeof MP_CONFIG!=="undefined" && MP_CONFIG.BACKEND_URL;
+
+  // Se Pix automático ligado, gera cobrança real no MP
+  if(pagamento==="Pix" && mpOn){
+    toast("Gerando Pix Mercado Pago...");
+    try{
+      const r = await fetch(MP_CONFIG.BACKEND_URL.replace(/\/$/,"")+"/criar-pagamento-pix",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({pedidoId:"PL-TMP", total:t.total, nome, email:"cliente@petlivre.com.br", loja:(typeof MP_CONFIG!=="undefined"&&MP_CONFIG.LOJA_ID)||"petlivre"})
+      });
+      const mp = await r.json();
+      if(!mp.qr_code){ toast("Falha MP, caindo p/ manual"); return finalizarLocal();
+      }
+      const pedido = criarPedido({cliente:{nome,zap}, entrega, pagamento:"Pix (MP)", troco:"", obs:document.getElementById("fObs").value.trim(), endereco, cupom, items, sub:t.sub, desc:t.desc, frete:t.frete, total:t.total, mpPaymentId:mp.id, status:"Aguardando pagamento"});
+      mostrarTelaPixMP(pedido, mp);
+      iniciarPollMP(pedido, mp.id);
+      return;
+    }catch(e){ toast("MP fora, finalizando manual"); return finalizarLocal(); }
+  }
+  return finalizarLocal();
+
+  function finalizarLocal(){
+    const pedido = criarPedido({
+      cliente: {nome, zap},
+      entrega, pagamento,
+      troco: pagamento==="Dinheiro" ? document.getElementById("fTroco").value.trim() : "",
+      obs: document.getElementById("fObs").value.trim(),
+      endereco, cupom, items,
+      sub: t.sub, desc: t.desc, frete: t.frete, total: t.total,
+      status: pagamento==="Pix" ? "Aguardando pagamento" : "Novo"
+    });
+    mostrarSucesso(pedido);
+  }
+}
+
+function mostrarTelaPixMP(pedido, mp){
+  document.getElementById("ckMain").innerHTML = `
+    <div class="card-box success">
+      <h1>Escaneie o Pix — ${pedido.id}</h1>
+      <p class="muted">Total <b>${fmt(pedido.total)}</b> · aprovando sozinho em segundos</p>
+      ${mp.qr_code_base64?`<img src="data:image/png;base64,${mp.qr_code_base64}" style="width:220px;height:220px;border:1px solid var(--line);border-radius:12px">`:""}
+      <div class="pixbox" style="max-width:520px;margin:12px auto;text-align:left;word-break:break-all"><b>Copia e cola:</b><br><small>${mp.qr_code}</small><br><button class="btn btn-dark" style="margin-top:8px" onclick="navigator.clipboard.writeText('${mp.qr_code.replace(/'/g,"")}');toast('Copiado!')">Copiar</button></div>
+      <p class="muted" id="mpStatus">⏳ Aguardando pagamento...</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><a class="btn btn-ghost" href="pedidos.html">Ver painel lojista</a></div>
+    </div>`;
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+async function iniciarPollMP(pedido, mpId){
+  clearInterval(MP_POLL);
+  MP_POLL = setInterval(async ()=>{
+    try{
+      const lojaId = (typeof MP_CONFIG!=="undefined"&&MP_CONFIG.LOJA_ID)||"petlivre";
+      const r = await fetch(MP_CONFIG.BACKEND_URL.replace(/\/$/,"")+"/status-pagamento/"+mpId+"?loja="+encodeURIComponent(lojaId));
+      const j = await r.json();
+      if(j.status==="approved"){
+        clearInterval(MP_POLL);
+        setStatusPedido(pedido.id, "Pago");
+        const atualizado = getOrders().find(o=>o.id===pedido.id) || pedido;
+        mostrarSucesso({...atualizado, status:"Pago"});
+      }
+    }catch{}
+  }, 5000);
+}
+function mostrarSucesso(pedido){
+  const zapMsg = msgPedidoWhats(pedido);
+  const nome = pedido.cliente?.nome || "";
+  const pagamento = pedido.pagamento || "";
+  const entrega = pedido.entrega || "";
+  document.getElementById("ckMain").innerHTML = `
+    <div class="card-box success">
+      <div style="font-size:50px">🎉</div>
+      <h1>Pedido ${pedido.id} recebido!</h1>
+      <p class="muted">Valeu, <b>${nome}</b>! Já mandamos pro lojista.<br>Total de <b>${fmt(pedido.total)}</b> no <b>${pagamento}</b> · ${entrega}.</p>
+      <div class="pixbox" style="max-width:480px;margin:14px auto;text-align:left">
+        ${pagamento==="Pix" ? `<b>Chave Pix (demo):</b> pix@petlivre.com.br<br><small>Copia e cola demo: 00020126580014BR.GOV.BCB.PIX0136pix@petlivre.com.br52040000530398654${pedido.total.toFixed(2)}5802BR5913PETLIVRE6009SAOPAULO62070503***6304DEMO</small>` : `Pague <b>${fmt(pedido.total)}</b> no <b>${pagamento}</b> na ${entrega==="Retirada"?"retirada":"entrega"}.`}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px">
+        <a class="btn btn-dark" href="${zapMsg}" target="_blank">Mandar no WhatsApp da loja</a>
+        <a class="btn btn-ghost" href="index.html">Voltar à loja</a>
+        <a class="btn btn-yellow" href="pedidos.html">Abrir painel de pedidos</a>
+      </div>
+    </div>`;
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+renderResumo();
+</script>
+</body>
+</html>

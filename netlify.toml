@@ -1,0 +1,28 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/mp/*"
+  to = "/.netlify/functions/mp-:splat"
+  status = 200
+
+[[redirects]]
+  from = "/criar-pagamento-pix"
+  to = "/.netlify/functions/mp-criar-pagamento-pix"
+  status = 200
+
+[[redirects]]
+  from = "/status-pagamento/:id"
+  to = "/.netlify/functions/mp-status-pagamento?id=:id"
+  status = 200
+
+[[redirects]]
+  from = "/reembolsar"
+  to = "/.netlify/functions/mp-reembolsar"
+  status = 200
+
+[[redirects]]
+  from = "/webhook"
+  to = "/.netlify/functions/mp-webhook"
+  status = 200

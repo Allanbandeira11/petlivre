@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Busca — PetLivre</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23FFD100'/><circle cx='38' cy='42' r='10' fill='%23D72600'/><circle cx='62' cy='42' r='10' fill='%23D72600'/><ellipse cx='50' cy='66' rx='16' ry='12' fill='%23D72600'/></svg>">
+</head>
+<body>
+
+<div class="topbar">Frete grátis acima de R$ 99 · 10% OFF no Pix com cupom PET10</div>
+
+<header class="header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo"><span class="logo-paw">P</span><span>Pet<b>Livre</b></span></a>
+    <div class="search">
+      <input id="buscaB" placeholder="Buscar ração, antipulgas, brinquedo..." oninput="mostrarSugestoes('buscaB','sugB')" onkeydown="if(event.key==='Enter'){event.preventDefault();irBusca('buscaB')}">
+      <button aria-label="Buscar" onclick="irBusca('buscaB')">Buscar</button>
+      <div id="sugB" class="sugestoes" hidden></div>
+    </div>
+    <div class="h-actions">
+      <a class="h-btn" href="index.html" style="text-decoration:none">Início</a>
+      <button class="h-btn cart-btn" onclick="abrirCarrinho()">Carrinho <span id="cartCount">0</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <p class="muted" style="font-size:13px;margin:16px 0 4px"><a href="index.html" style="color:var(--red);font-weight:700;text-decoration:none">Início</a> / Busca</p>
+  <section class="toolbar">
+    <div>
+      <h2 id="tituloBusca">Resultados</h2>
+      <p class="muted" id="contBusca" style="font-size:14px;margin-top:4px"></p>
+    </div>
+    <div class="tools">
+      <select id="ordemB" onchange="renderBusca()">
+        <option value="rel">Mais relevantes</option>
+        <option value="menor">Menor preço</option>
+        <option value="maior">Maior preço</option>
+        <option value="off">Maior desconto</option>
+      </select>
+    </div>
+  </section>
+  <div class="grid" id="gridBusca"></div>
+  <div id="semResultado" hidden style="text-align:center;padding:30px 0">
+    <h3>Nada encontrado por aqui... 🐾</h3>
+    <p class="muted">Tente "ração", "antipulgas", "brinquedo" ou veja os mais vendidos abaixo.</p>
+    <div class="grid" id="gridSug" style="margin-top:16px"></div>
+  </div>
+</main>
+
+<footer>
+  <div class="container f-grid">
+    <div><h3>PetLivre</h3><p>Ração, vacinas sem prescrição, saúde, brinquedos e acessórios. Preço justo todo dia.</p></div>
+    <div><h4>Ajuda</h4><a href="index.html">Voltar à loja</a></div>
+    <div><h4>Categorias</h4><a href="index.html">Ver tudo</a></div>
+    <div><h4>Atendimento</h4><a href="mailto:contato@petlivre.com.br">contato@petlivre.com.br</a></div>
+  </div>
+  <div class="copy">© 2026 PetLivre · Projeto demo</div>
+</footer>
+
+<aside id="drawer" class="drawer" hidden>
+  <div class="drawer-box">
+    <div class="drawer-head"><h3>Seu carrinho</h3><button onclick="fecharCarrinho()">X</button></div>
+    <div id="cartItems" class="cart-items"></div>
+    <div class="cupom"><input id="cupom" placeholder="Cupom (tente PET10)"><button onclick="renderCart()">Aplicar</button></div>
+    <div id="freteBar"></div>
+    <div class="totals"><p>Subtotal <b id="subTotal">R$ 0,00</b></p><p>Desconto <b id="desconto">R$ 0,00</b></p><p class="total">Total <b id="total">R$ 0,00</b></p><small class="muted">+ frete calculado no checkout</small></div>
+    <button class="btn btn-red btn-block" onclick="irCheckout(event)">Ir para checkout →</button>
+    <button class="btn btn-ghost btn-block" onclick="fecharCarrinho()">Continuar comprando</button>
+  </div>
+</aside>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const termo = (params.get("q") || "").trim();
+document.getElementById("buscaB").value = termo;
+document.title = termo ? `Busca por "${termo}" — PetLivre` : "Busca — PetLivre";
+
+function cardHTML(p){
+  const off = Math.round((1-p.price/p.old)*100);
+  return `<div class="card">
+    <a class="p-link" href="produto.html?id=${p.id}"><div class="p-img" style="background:linear-gradient(135deg,${p.c1},${p.c2})">${p.name[0]}</div></a>
+    <span class="p-cat">${p.cat}${p.tag?" · "+p.tag:""}</span>
+    <a class="p-name" href="produto.html?id=${p.id}"><h3>${p.name}</h3></a>
+    <span class="stars">★ ${p.rating}</span>
+    <div class="price"><small>${fmt(p.old)}</small><b>${fmt(p.price)}</b><em>-${off}%</em></div>
+    <span class="ship">${p.ship}</span>
+    <div class="row2"><a class="btn btn-ghost" href="produto.html?id=${p.id}">Ver</a><button class="btn btn-dark" onclick="add(${p.id})">Adicionar</button></div>
+  </div>`;
+}
+
+function renderBusca(){
+  const ordem = document.getElementById("ordemB").value;
+  let list = filtrarProdutos(termo);
+  if(!termo) list = PRODUCTS.slice();
+  if(ordem==="menor") list.sort((a,b)=>a.price-b.price);
+  if(ordem==="maior") list.sort((a,b)=>b.price-a.price);
+  if(ordem==="off") list.sort((a,b)=>((b.old-b.price)/b.old)-((a.old-a.price)/a.old));
+
+  document.getElementById("tituloBusca").textContent = termo ? `Resultados para "${termo}"` : "Todos os produtos";
+  document.getElementById("contBusca").textContent = list.length + (list.length===1 ? " item encontrado" : " itens encontrados");
+
+  if(!list.length){
+    document.getElementById("gridBusca").innerHTML = "";
+    document.getElementById("semResultado").hidden = false;
+    document.getElementById("gridSug").innerHTML = PRODUCTS.slice(0,4).map(cardHTML).join("");
+  } else {
+    document.getElementById("semResultado").hidden = true;
+    document.getElementById("gridBusca").innerHTML = list.map(cardHTML).join("");
+  }
+}
+renderBusca();
+renderCart();
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produto — PetLivre</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.crumb{font-size:13px;margin:16px 0;color:var(--mut)}.crumb a{color:var(--red);font-weight:700;text-decoration:none}
+.p-page{display:grid;grid-template-columns:1fr 1fr 320px;gap:18px;margin-bottom:26px}
+.p-gallery{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}
+.p-main-img{height:320px;border-radius:12px;display:grid;place-items:center;font-size:90px;font-weight:900;color:#fff}
+.p-thumbs{display:flex;gap:8px;margin-top:10px}.p-thumbs i{flex:1;height:56px;border-radius:8px;border:2px solid transparent;cursor:pointer}
+.p-thumbs i.sel{border-color:var(--red)}
+.p-info{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px}
+.p-info h1{font-size:26px;margin:6px 0 10px}
+.p-buy{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:10px;height:fit-content}
+.qtybox{display:flex;gap:10px;align-items:center}.qtybox button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);font-size:18px;font-weight:900;cursor:pointer}
+.specs{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:26px}
+.specs ul{margin:10px 0 0 18px;color:var(--mut)}
+.rel h2{margin-bottom:12px}
+@media(max-width:1000px){.p-page{grid-template-columns:1fr 1fr}.p-buy{grid-column:1/-1}}
+@media(max-width:640px){.p-page{grid-template-columns:1fr}.p-main-img{height:230px}}
+</style>
+</head>
+<body>
+<div class="topbar">Frete grátis acima de R$ 99 · 10% OFF no Pix com cupom PET10</div>
+<header class="header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo"><span class="logo-paw">P</span><span>Pet<b>Livre</b></span></a>
+    <div class="search"><input id="buscaP" placeholder="Buscar outro produto..." oninput="mostrarSugestoes('buscaP','sugP')" onkeydown="if(event.key==='Enter'){event.preventDefault();irBusca('buscaP')}"><button onclick="irBusca('buscaP')">Buscar</button><div id="sugP" class="sugestoes" hidden></div></div>
+    <div class="h-actions"><a class="h-btn" href="index.html" style="text-decoration:none">Início</a><button class="h-btn cart-btn" onclick="abrirCarrinho()">Carrinho <span id="cartCount">0</span></button></div>
+  </div>
+</header>
+
+<main class="container">
+  <p class="crumb"><a href="index.html">Início</a> / <span id="crumbCat">...</span> / <b id="crumbName">...</b></p>
+  <section class="p-page">
+    <div class="p-gallery"><div class="p-main-img" id="pImg">P</div><div class="p-thumbs" id="pThumbs"></div></div>
+    <div class="p-info">
+      <span class="p-cat" id="pCat"></span>
+      <h1 id="pName"></h1>
+      <span class="stars" id="pRating"></span>
+      <div class="price" id="pPrice" style="margin:12px 0"></div>
+      <p class="muted" id="pShip" style="font-size:14px"></p>
+      <p class="muted" style="font-size:13px;margin-top:10px">Vacinas e medicamentos aqui <b>não exigem receita</b>. Em caso de dúvida, fale com um veterinário.</p>
+    </div>
+    <div class="p-buy">
+      <p class="muted" style="font-size:13px">Estoque disponível · envio imediato</p>
+      <div class="qtybox"><button onclick="qtd(-1)">-</button><b id="q">1</b><button onclick="qtd(1)">+</button></div>
+      <button class="btn btn-dark btn-block" id="btnAdd">Adicionar ao carrinho</button>
+      <button class="btn btn-red btn-block" id="btnBuy">Comprar agora</button>
+      <a class="btn btn-ghost btn-block" href="index.html">Voltar à loja</a>
+    </div>
+  </section>
+
+  <section class="specs"><h2>Detalhes do produto</h2><p class="muted" id="pDesc"></p><ul id="pSpecs"></ul></section>
+
+  <section class="rel"><h2>Quem viu, levou também</h2><div class="grid" id="relGrid"></div></section>
+</main>
+
+<aside id="drawer" class="drawer" hidden>
+  <div class="drawer-box">
+    <div class="drawer-head"><h3>Seu carrinho</h3><button onclick="fecharCarrinho()">X</button></div>
+    <div id="cartItems" class="cart-items"></div>
+    <div class="cupom"><input id="cupom" placeholder="Cupom (tente PET10)"><button onclick="renderCart()">Aplicar</button></div>
+    <div id="freteBar"></div>
+    <div class="totals"><p>Subtotal <b id="subTotal">R$ 0,00</b></p><p>Desconto <b id="desconto">R$ 0,00</b></p><p class="total">Total <b id="total">R$ 0,00</b></p><small class="muted">+ frete calculado no checkout</small></div>
+    <button class="btn btn-red btn-block" onclick="irCheckout(event)">Ir para checkout →</button>
+    <button class="btn btn-ghost btn-block" onclick="fecharCarrinho()">Continuar comprando</button>
+  </div>
+</aside>
+<div id="toast"></div>
+<script src="app.js"></script>
+<script>
+const id = +new URLSearchParams(location.search).get("id");
+const p = PRODUCTS.find(x => x.id === id) || PRODUCTS[0];
+let quantity = 1;
+document.title = p.name + " — PetLivre";
+crumbCat.textContent = p.cat; crumbName.textContent = p.name;
+pCat.textContent = p.cat + (p.tag ? " · " + p.tag : "");
+pName.textContent = p.name; pRating.textContent = "★ " + p.rating;
+const off = Math.round((1 - p.price / p.old) * 100);
+pPrice.innerHTML = `<small>${fmt(p.old)}</small><b>${fmt(p.price)}</b><em>-${off}%</em><br><small style="text-decoration:none;color:#00753a">à vista no Pix com PET10: ${fmt(p.price*0.9)}</small>`;
+pShip.textContent = p.ship || "Entrega local";
+const grad = `linear-gradient(135deg,${p.c1},${p.c2})`;
+pImg.style.background = grad; pImg.textContent = p.name[0];
+pThumbs.innerHTML = [0,1,2].map(i=>`<i class="${i===0?'sel':''}" style="background:${grad};opacity:${1-i*0.25}"></i>`).join("");
+pThumbs.querySelectorAll("i").forEach(el=>el.onclick=()=>{pThumbs.querySelectorAll("i").forEach(x=>x.classList.remove("sel"));el.classList.add("sel");});
+pDesc.textContent = `${p.name}: produto original, lacrado e com garantia de troca em 7 dias. Ideal para o dia a dia do seu pet, com ótimo custo-benefício.`;
+pSpecs.innerHTML = [`Categoria: ${p.cat}`,`Avaliação: ${p.rating}`,`Envio: ${p.ship||"Entrega local"}`,`Garantia: 7 dias contra defeito`].map(s=>`<li>${s}</li>`).join("");
+function qtd(d){ quantity = Math.max(1, quantity + d); document.getElementById("q").textContent = quantity; }
+btnAdd.onclick = () => { for(let i=0;i<quantity;i++) add(p.id); abrirCarrinho(); };
+btnBuy.onclick = () => { for(let i=0;i<quantity;i++) add(p.id); irCheckout(event); };
+relGrid.innerHTML = PRODUCTS.filter(x=>x.cat===p.cat && x.id!==p.id).concat(PRODUCTS.filter(x=>x.cat!==p.cat)).slice(0,4).map(r=>`
+  <div class="card"><a class="p-link" href="produto.html?id=${r.id}"><div class="p-img" style="background:linear-gradient(135deg,${r.c1},${r.c2})">${r.name[0]}</div></a>
+  <span class="p-cat">${r.cat}</span><a class="p-name" href="produto.html?id=${r.id}"><h3>${r.name}</h3></a>
+  <div class="price"><b>${fmt(r.price)}</b></div><a class="btn btn-dark" href="produto.html?id=${r.id}">Ver produto</a></div>`).join("");
+function buscarDeVolta(){ location.href = "index.html?q=" + encodeURIComponent(buscaP.value); }
+renderCart();
+</script>
+</body>
+</html>
