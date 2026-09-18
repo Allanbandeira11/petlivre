@@ -10,7 +10,7 @@
 //   e ative Blobs (grátis). BACKEND_URL abaixo = URL do próprio site.
 // - Render (alternativa): suba server-mp-exemplo.js e ponha a URL aqui.
 const MP_CONFIG = {
-  BACKEND_URL: "", // Netlify: "https://petlivre.netlify.app" | Render: "https://xxx.onrender.com" | vazio = demo
+  BACKEND_URL: "https://petlivre.netlify.app", // Netlify: "https://petlivre.netlify.app" | Render: "https://xxx.onrender.com" | vazio = demo
   LOJA_ID: "petlivre", // um por cliente: "petlivre-centro", "petshop-x"...
   LOJA_NOME: "PetLivre"
 };
